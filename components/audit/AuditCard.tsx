@@ -6,7 +6,7 @@ export function AuditCard({ audit }: { audit: InstagramAudit }) {
   return (
     <Link
       href={`/auditoria/instagram/${audit.id}`}
-      className="bg-aud-bg-card border border-white/8 rounded-xl p-5 flex items-center justify-between hover:border-aud-gold/30 transition-colors block"
+      className="bg-aud-bg-card border border-white/8 rounded-xl p-5 flex items-center justify-between hover:border-aud-gold/30 transition-colors"
     >
       <div>
         <p className="font-semibold text-white">@{audit.instagramHandle}</p>

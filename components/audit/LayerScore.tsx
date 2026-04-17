@@ -1,4 +1,5 @@
-interface LayerScoreProps {
+// Display props extend the LayerScore data shape with label and expand toggle
+interface LayerScoreCardProps {
   label: string
   score: number
   maxScore: number
@@ -6,7 +7,7 @@ interface LayerScoreProps {
   expanded?: boolean
 }
 
-export function LayerScore({ label, score, maxScore, feedback, expanded = false }: LayerScoreProps) {
+export function LayerScore({ label, score, maxScore, feedback, expanded = false }: LayerScoreCardProps) {
   const pct = Math.round((score / maxScore) * 100)
   const color = pct >= 70 ? 'bg-aud-success' : pct >= 40 ? 'bg-aud-warning' : 'bg-aud-danger'
 

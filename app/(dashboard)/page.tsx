@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { TierBadge } from '@/components/audit/TierBadge'
+import { AuditCard } from '@/components/audit/AuditCard'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 
@@ -23,22 +23,7 @@ export default async function HomePage() {
       ) : (
         <div className="grid gap-4">
           {audits.map(audit => (
-            <Link
-              key={audit.id}
-              href={`/auditoria/instagram/${audit.id}`}
-              className="bg-aud-bg-card border border-white/8 rounded-xl p-5 flex items-center justify-between hover:border-aud-gold/30 transition-colors"
-            >
-              <div>
-                <p className="font-medium text-white">@{audit.instagramHandle}</p>
-                <p className="text-aud-text-subtle text-sm mt-0.5">
-                  {audit.createdAt.toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-2xl font-bold text-aud-gold">{audit.overallScore}</span>
-                <TierBadge tier={audit.tier} />
-              </div>
-            </Link>
+            <AuditCard key={audit.id} audit={audit} />
           ))}
         </div>
       )}
