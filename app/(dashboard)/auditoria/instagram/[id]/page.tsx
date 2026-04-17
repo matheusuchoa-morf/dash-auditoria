@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { TierBadge } from '@/components/audit/TierBadge'
 import { LayerScore } from '@/components/audit/LayerScore'
 import { KPISnapshot } from '@/components/audit/KPISnapshot'
@@ -9,6 +10,13 @@ export default async function AuditoriaInstagramResultPage({ params }: { params:
   const { id } = await params
   const audit = await db.getInstagramAudit(id)
   if (!audit) notFound()
+
+  // Authorization: verify audit belongs to current user (or is accessible to mentor/admin)
+  const cookieStore = await cookies()
+  const userId = cookieStore.get('mock_user_id')?.value
+  if (audit.userId !== userId) {
+    notFound() // don't leak existence of other users' audits
+  }
 
   return (
     <div className="max-w-3xl">
@@ -21,6 +29,12 @@ export default async function AuditoriaInstagramResultPage({ params }: { params:
         <div className="text-right">
           <p className="text-5xl font-bold text-aud-gold">{audit.overallScore}</p>
           <TierBadge tier={audit.tier} size="lg" />
+          <a
+            href={`/api/auditoria/instagram/${audit.id}/pdf`}
+            className="inline-block mt-3 px-4 py-2 text-sm font-medium text-aud-gold border border-aud-gold/40 rounded-lg hover:bg-aud-gold/10 transition-colors"
+          >
+            Baixar PDF
+          </a>
         </div>
       </div>
 
