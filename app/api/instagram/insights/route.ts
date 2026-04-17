@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
       getRecentMedia(encToken, 12),
     ])
     return NextResponse.json({ profile, media })
-  } catch {
+  } catch (err) {
+    console.error('[instagram/insights]', err)
     return NextResponse.json({ error: 'Failed to fetch Instagram data' }, { status: 502 })
   }
 }

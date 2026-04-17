@@ -14,6 +14,7 @@ export function encrypt(plaintext: string, secret: string): string {
 }
 
 export function decrypt(ciphertext: string, secret: string): string {
+  if (!ciphertext.includes(':')) throw new Error('Invalid ciphertext format')
   const [ivHex, encHex] = ciphertext.split(':')
   const key = deriveKey(secret)
   const iv = Buffer.from(ivHex, 'hex')

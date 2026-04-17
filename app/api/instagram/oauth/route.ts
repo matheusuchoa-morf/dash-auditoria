@@ -8,7 +8,14 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = req.nextUrl
   const code = searchParams.get('code')
+  const state = searchParams.get('state')
   const error = searchParams.get('error')
+
+  // CSRF check: verify state matches what we stored in the session cookie
+  const storedState = req.cookies.get('ig_oauth_state')?.value
+  if (!storedState || state !== storedState) {
+    return NextResponse.redirect(new URL('/auditoria/instagram/nova?error=invalid_state', req.url))
+  }
 
   if (error || !code) {
     return NextResponse.redirect(new URL('/auditoria/instagram/nova?error=oauth_denied', req.url))
@@ -25,6 +32,8 @@ export async function GET(req: NextRequest) {
       maxAge: 3600,
       path: '/',
     })
+    // Clear the used state cookie
+    res.cookies.delete('ig_oauth_state')
     return res
   } catch {
     return NextResponse.redirect(new URL('/auditoria/instagram/nova?error=token_exchange', req.url))

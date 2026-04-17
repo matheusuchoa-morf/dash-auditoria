@@ -1,9 +1,15 @@
 import { encrypt, decrypt } from './crypto'
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY!
-const IG_APP_ID = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID!
-const IG_APP_SECRET = process.env.INSTAGRAM_CLIENT_SECRET!
-const REDIRECT_URI = process.env.INSTAGRAM_REDIRECT_URI!
+function requireEnv(name: string): string {
+  const val = process.env[name]
+  if (!val) throw new Error(`Missing required environment variable: ${name}`)
+  return val
+}
+
+function getEncryptionKey() { return requireEnv('ENCRYPTION_KEY') }
+function getIGAppId() { return requireEnv('NEXT_PUBLIC_INSTAGRAM_APP_ID') }
+function getIGAppSecret() { return requireEnv('INSTAGRAM_CLIENT_SECRET') }
+function getRedirectUri() { return requireEnv('INSTAGRAM_REDIRECT_URI') }
 
 export interface IGProfile {
   id: string
@@ -28,8 +34,8 @@ export interface IGMedia {
 
 export function getOAuthUrl(state: string): string {
   const params = new URLSearchParams({
-    client_id: IG_APP_ID,
-    redirect_uri: REDIRECT_URI,
+    client_id: getIGAppId(),
+    redirect_uri: getRedirectUri(),
     scope: 'instagram_basic,instagram_manage_insights',
     response_type: 'code',
     state,
@@ -42,10 +48,10 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: IG_APP_ID,
-      client_secret: IG_APP_SECRET,
+      client_id: getIGAppId(),
+      client_secret: getIGAppSecret(),
       grant_type: 'authorization_code',
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: getRedirectUri(),
       code,
     }),
   })
@@ -55,16 +61,17 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
 }
 
 export function encryptToken(token: string): string {
-  return encrypt(token, ENCRYPTION_KEY)
+  return encrypt(token, getEncryptionKey())
 }
 
 export function decryptToken(encrypted: string): string {
-  return decrypt(encrypted, ENCRYPTION_KEY)
+  return decrypt(encrypted, getEncryptionKey())
 }
 
 async function igFetch<T>(path: string, token: string): Promise<T> {
-  const url = `https://graph.instagram.com${path}${path.includes('?') ? '&' : '?'}access_token=${token}`
-  const res = await fetch(url)
+  const res = await fetch(`https://graph.instagram.com${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
   if (!res.ok) throw new Error(`Instagram API error: ${res.status}`)
   return res.json()
 }
