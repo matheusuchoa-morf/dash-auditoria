@@ -1,7 +1,8 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto'
 
 function deriveKey(secret: string): Buffer {
-  return scryptSync(secret, 'auditoria-salt', 32)
+  const salt = process.env.CRYPTO_SALT ?? 'auditoria-dev-salt-change-in-prod'
+  return scryptSync(secret, salt, 32)
 }
 
 export function encrypt(plaintext: string, secret: string): string {
