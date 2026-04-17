@@ -15,7 +15,7 @@
   --color-aud-gold:        #C9A45A;
   --color-aud-gold-light:  #E8C97A;
   --color-aud-text:        #FFFFFF;
-  --color-aud-text-muted:  #EFEFEF;
+  --color-aud-text-secondary: #EFEFEF;
   --color-aud-text-subtle: #8A9BA0;
   --color-aud-success:     #4CAF82;
   --color-aud-warning:     #F0B429;
@@ -24,7 +24,7 @@
   /* Tier colors */
   --color-tier-bronze:  #CD7F32;
   --color-tier-prata:   #A8A9AD;
-  --color-tier-ouro:    #C9A45A;
+  --color-tier-ouro:    var(--color-aud-gold);
   --color-tier-platina: #E5E4E2;
 
   --color-sidebar-ring: var(--sidebar-ring);
