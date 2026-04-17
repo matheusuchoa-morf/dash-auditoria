@@ -3,7 +3,16 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Globe, CheckCircle, Loader2 } from 'lucide-react'
 
-type Step = 1 | 2 | 3
+function isValidUrl(s: string): boolean {
+  try {
+    const url = new URL(s)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+type Step = 1 | 2
 
 export function LPWizard() {
   const router = useRouter()
@@ -33,14 +42,14 @@ export function LPWizard() {
   return (
     <div className="max-w-lg mx-auto">
       <div className="flex items-center gap-2 mb-8">
-        {([1, 2, 3] as Step[]).map(n => (
+        {([1, 2] as Step[]).map(n => (
           <div key={n} className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
               n < step ? 'bg-aud-success text-white' : n === step ? 'bg-aud-gold text-aud-bg-base' : 'bg-white/10 text-aud-text-subtle'
             }`}>
               {n < step ? <CheckCircle size={16} /> : n}
             </div>
-            {n < 3 && <div className={`flex-1 h-0.5 w-16 ${n < step ? 'bg-aud-success' : 'bg-white/10'}`} />}
+            {n < 2 && <div className={`flex-1 h-0.5 w-16 ${n < step ? 'bg-aud-success' : 'bg-white/10'}`} />}
           </div>
         ))}
       </div>
@@ -58,8 +67,8 @@ export function LPWizard() {
             className="w-full bg-aud-bg-elevated border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-aud-text-subtle focus:outline-none focus:ring-1 focus:ring-aud-gold mb-4"
           />
           <button
-            onClick={() => url && setStep(2)}
-            disabled={!url}
+            onClick={() => isValidUrl(url) && setStep(2)}
+            disabled={!isValidUrl(url)}
             className="bg-aud-gold text-aud-bg-base font-semibold px-6 py-3 rounded-lg hover:bg-aud-gold-light transition-colors disabled:opacity-60 w-full"
           >
             Continuar
