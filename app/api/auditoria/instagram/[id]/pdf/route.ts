@@ -14,13 +14,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const audit = await db.getInstagramAudit(id)
   if (!audit) return NextResponse.json({ error: 'Auditoria não encontrada' }, { status: 404 })
 
-  const element = React.createElement(AuditPDFDocument, { audit }) as React.ReactElement<DocumentProps>
-  const buffer = await renderToBuffer(element)
+  // Students can only download their own audits; mentors/admins can view any
+  if (authResult.user.role === 'student' && audit.userId !== authResult.user.id) {
+    return NextResponse.json({ error: 'Auditoria não encontrada' }, { status: 404 })
+  }
 
-  return new NextResponse(new Uint8Array(buffer), {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="auditoria-${audit.instagramHandle}-${audit.id.slice(0, 8)}.pdf"`,
-    },
-  })
+  const element = React.createElement(AuditPDFDocument, { audit }) as React.ReactElement<DocumentProps>
+
+  try {
+    const buffer = await renderToBuffer(element)
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="auditoria-${audit.instagramHandle}-${audit.id.slice(0, 8)}.pdf"`,
+      },
+    })
+  } catch (err) {
+    console.error('[pdf/route] renderToBuffer failed', err)
+    return NextResponse.json({ error: 'Falha ao gerar PDF' }, { status: 500 })
+  }
 }
