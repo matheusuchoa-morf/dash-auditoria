@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Camera, Globe, Clock, Users, Home, LogOut } from 'lucide-react'
+import { Camera, Globe, Clock, Users, Home, LogOut, Zap } from 'lucide-react'
 
 const nav = [
   { href: '/',                         label: 'Início',           icon: Home },
   { href: '/auditoria/instagram/nova', label: 'Auditar Instagram', icon: Camera },
   { href: '/auditoria/lp/nova',        label: 'Auditar LP',       icon: Globe },
+  { href: '/auditoria/criativo/nova',  label: 'Auditar Criativo', icon: Zap },
   { href: '/historico',                label: 'Histórico',        icon: Clock },
   { href: '/mentor',                   label: 'Mentores',         icon: Users },
 ]
