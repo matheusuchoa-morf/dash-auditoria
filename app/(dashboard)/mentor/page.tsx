@@ -1,8 +1,13 @@
 import { db } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
 import { TierBadge } from '@/components/audit/TierBadge'
 import Link from 'next/link'
+import { NextResponse } from 'next/server'
 
 export default async function MentorPage() {
+  const authResult = await requireRole('mentor')
+  if (authResult instanceof NextResponse) return authResult
+
   const students = await db.getAllStudentsLatestAudit()
   const ranked = [...students].sort((a, b) => b.overallScore - a.overallScore)
 

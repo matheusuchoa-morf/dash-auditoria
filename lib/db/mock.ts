@@ -1,6 +1,7 @@
 import type { AuditRepository } from './repository'
 import type { InstagramAudit, LPAudit, StudentSummary } from '@/types/audit'
 import { randomUUID } from 'crypto'
+import { getMockUsers } from '@/lib/auth'
 
 const instagramAudits: InstagramAudit[] = [
   {
@@ -111,9 +112,10 @@ export const mockRepository: AuditRepository = {
         byUser.set(a.userId, { ...entry, count: entry.count + 1 })
       }
     }
+    const mockUsers = getMockUsers()
     return Array.from(byUser.values()).map(({ latest, count }) => ({
       userId: latest.userId,
-      email: `${latest.userId}@mock.com`,
+      email: mockUsers.find(u => u.id === latest.userId)?.email ?? `${latest.userId}@mock.com`,
       instagramHandle: latest.instagramHandle,
       tier: latest.tier,
       overallScore: latest.overallScore,
