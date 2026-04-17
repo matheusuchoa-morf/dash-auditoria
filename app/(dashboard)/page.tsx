@@ -1,9 +1,12 @@
 import { db } from '@/lib/db'
 import { TierBadge } from '@/components/audit/TierBadge'
-import { calcOverallScore } from '@/types/audit'
+import { cookies } from 'next/headers'
+import Link from 'next/link'
 
 export default async function HomePage() {
-  const audits = await db.getInstagramAudits('user-student-1') // TODO: real userId from session
+  const cookieStore = await cookies()
+  const userId = cookieStore.get('mock_user_id')?.value ?? 'user-student-1'
+  const audits = await db.getInstagramAudits(userId)
 
   return (
     <div>
@@ -13,14 +16,14 @@ export default async function HomePage() {
       {audits.length === 0 ? (
         <div className="bg-aud-bg-card border border-white/8 rounded-xl p-8 text-center">
           <p className="text-aud-text-subtle mb-4">Nenhuma auditoria ainda</p>
-          <a href="/auditoria/instagram/nova" className="text-aud-gold hover:underline text-sm">
+          <Link href="/auditoria/instagram/nova" className="text-aud-gold hover:underline text-sm">
             Iniciar primeira auditoria →
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="grid gap-4">
           {audits.map(audit => (
-            <a
+            <Link
               key={audit.id}
               href={`/auditoria/instagram/${audit.id}`}
               className="bg-aud-bg-card border border-white/8 rounded-xl p-5 flex items-center justify-between hover:border-aud-gold/30 transition-colors"
@@ -32,10 +35,10 @@ export default async function HomePage() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-2xl font-bold text-aud-gold">{calcOverallScore(audit.layers)}</span>
+                <span className="text-2xl font-bold text-aud-gold">{audit.overallScore}</span>
                 <TierBadge tier={audit.tier} />
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       )}
