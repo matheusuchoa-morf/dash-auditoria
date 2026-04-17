@@ -3,9 +3,14 @@ import { requireAuth } from '@/lib/auth'
 import { instagramAuditLimiter } from '@/lib/rate-limit'
 import { getProfile, getRecentMedia, guessPostFormat, countPostsInLastDays } from '@/lib/instagram-api'
 import { analyzeAuthority, analyzeBusiness, analyzePost, generateSummary } from '@/lib/ai-analyzer'
+import { decrypt } from '@/lib/crypto'
 import { db } from '@/lib/db'
 import { tierFromPostsPerWeek, calcOverallScore } from '@/types/audit'
-import type { InstagramAudit } from '@/types/audit'
+import type { InstagramAudit, LayerScore, PostAnalysis } from '@/types/audit'
+
+function getEncryptionKey(): string {
+  return process.env.ENCRYPTION_KEY ?? 'dev-encryption-key-change-in-prod'
+}
 
 export async function POST(req: NextRequest) {
   const authResult = await requireAuth()
@@ -19,21 +24,96 @@ export async function POST(req: NextRequest) {
   const encToken = req.cookies.get('ig_token_enc')?.value
   if (!encToken) return NextResponse.json({ error: 'Instagram não conectado' }, { status: 400 })
 
-  // Phase 1: Fetch Instagram data
-  let profile: Awaited<ReturnType<typeof getProfile>>
-  let media: Awaited<ReturnType<typeof getRecentMedia>>
+  // Detect dev mode: token was stored as encrypt("dev:handle")
+  let rawToken: string
   try {
-    ;[profile, media] = await Promise.all([
-      getProfile(encToken),
-      getRecentMedia(encToken, 50), // 50 posts for reliable 7-day frequency calculation
-    ])
-  } catch (err) {
-    console.error('[audit/instagram] Instagram API error:', err)
-    return NextResponse.json({ error: 'Falha ao buscar dados do Instagram. Reconecte sua conta.' }, { status: 401 })
+    rawToken = decrypt(encToken, getEncryptionKey())
+  } catch {
+    return NextResponse.json({ error: 'Token inválido. Reconecte sua conta.' }, { status: 400 })
   }
 
-  // Phase 2: AI analysis + DB save
+  const isDevMode = rawToken.startsWith('dev:')
+  const devHandle = isDevMode ? rawToken.slice(4) : ''
+
+  // Phase 2: analysis + DB save
   try {
+    let layers: InstagramAudit['layers']
+    let instagramHandle: string
+
+    if (isDevMode) {
+      // Dev mode: skip real Instagram API + AI calls, use mock data
+      instagramHandle = devHandle
+
+      const authority: LayerScore = {
+        score: 72,
+        maxScore: 100,
+        feedback: 'Perfil bem estruturado. Bio clara com CTA. Foto profissional.',
+      }
+      const business: LayerScore = {
+        score: 68,
+        maxScore: 100,
+        feedback: 'Oferta identificável. Público bem definido. Narrativa coerente.',
+      }
+      const mockPosts: PostAnalysis[] = Array.from({ length: 3 }, (_, i) => ({
+        postUrl: `https://www.instagram.com/p/mock${i}/`,
+        format: 'estatico' as const,
+        hook: 45 - i * 5,
+        development: 22 - i * 2,
+        cta: 8,
+        total: 75 - i * 7,
+        aiFeedback: 'Gancho visual forte. Desenvolvimento lógico. CTA presente.',
+      }))
+      const averageAttentionScore = Math.round(
+        mockPosts.reduce((sum, p) => sum + p.total, 0) / mockPosts.length
+      )
+      const postsPerWeek = 7
+      const performanceTier = tierFromPostsPerWeek(postsPerWeek)
+      const performanceScore = 80
+
+      layers = {
+        authority,
+        performance: { tier: performanceTier, postsPerWeek, score: performanceScore, maxScore: 100 },
+        business,
+        attention: { posts: mockPosts, averageScore: averageAttentionScore },
+      }
+
+      const overallScore = calcOverallScore(layers)
+      const tier = performanceTier
+      const aiSummary = `Análise de desenvolvimento para @${devHandle}. Perfil com bom potencial. Pontuação geral: ${overallScore}/100.`
+
+      const audit = await db.saveInstagramAudit({
+        userId: user.id,
+        instagramHandle,
+        tier,
+        overallScore,
+        layers,
+        kpis: {
+          profileStatus: authority.score >= 70 ? 'ajustado' : 'nao_ajustado',
+          frequencyTier: performanceTier,
+          bioConversion: true,
+          narrativeQuality: averageAttentionScore,
+          pareto8020Applied: false,
+        },
+        aiSummary,
+      })
+
+      return NextResponse.json({ audit })
+    }
+
+    // Phase 1: Fetch real Instagram data
+    let profile: Awaited<ReturnType<typeof getProfile>>
+    let media: Awaited<ReturnType<typeof getRecentMedia>>
+    try {
+      ;[profile, media] = await Promise.all([
+        getProfile(encToken),
+        getRecentMedia(encToken, 50), // 50 posts for reliable 7-day frequency calculation
+      ])
+    } catch (err) {
+      console.error('[audit/instagram] Instagram API error:', err)
+      return NextResponse.json({ error: 'Falha ao buscar dados do Instagram. Reconecte sua conta.' }, { status: 401 })
+    }
+
+    instagramHandle = profile.username
     const recentCaptions = media.slice(0, 5).map(m => m.caption ?? '').filter(Boolean)
     const postsPerWeek = countPostsInLastDays(media, 7)
 
@@ -65,7 +145,7 @@ export async function POST(req: NextRequest) {
       ? Math.round(postAnalyses.reduce((sum, p) => sum + p.total, 0) / postAnalyses.length)
       : 0
 
-    const layers: InstagramAudit['layers'] = {
+    layers = {
       authority,
       performance: { tier: performanceTier, postsPerWeek, score: performanceScore, maxScore: 100 },
       business,
@@ -78,7 +158,7 @@ export async function POST(req: NextRequest) {
 
     const audit = await db.saveInstagramAudit({
       userId: user.id,
-      instagramHandle: profile.username,
+      instagramHandle,
       tier,
       overallScore,
       layers,
