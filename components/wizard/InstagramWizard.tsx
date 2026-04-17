@@ -14,9 +14,14 @@ export function InstagramWizard({ initialStep = 1 }: InstagramWizardProps) {
   const [error, setError] = useState('')
 
   async function handleConnectInstagram() {
-    const res = await fetch('/api/instagram/oauth-url')
-    const { url } = await res.json()
-    window.location.href = url
+    try {
+      const res = await fetch('/api/instagram/oauth-url')
+      if (!res.ok) throw new Error('Falha ao iniciar OAuth')
+      const { url } = await res.json()
+      window.location.href = url
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao conectar com Instagram')
+    }
   }
 
   async function handleRunAudit() {
