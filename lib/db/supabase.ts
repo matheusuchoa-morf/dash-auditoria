@@ -2,10 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import type { AuditRepository } from './repository'
 import type { InstagramAudit, LPAudit, StudentSummary } from '@/types/audit'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('[supabase] NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set')
+  return createClient(url, key)
+}
 
 function toInstagramAudit(row: Record<string, unknown>): InstagramAudit {
   return {
@@ -21,9 +23,21 @@ function toInstagramAudit(row: Record<string, unknown>): InstagramAudit {
   }
 }
 
+function toStudentSummary(row: Record<string, unknown>): StudentSummary {
+  return {
+    userId: row.user_id as string,
+    email: row.email as string,
+    instagramHandle: row.instagram_handle as string,
+    tier: row.tier as StudentSummary['tier'],
+    overallScore: row.overall_score as number,
+    lastAuditDate: new Date(row.last_audit_date as string),
+    totalAudits: Number(row.total_audits),
+  }
+}
+
 export const supabaseRepository: AuditRepository = {
   async getInstagramAudits(userId) {
-    const { data, error } = await supabase
+    const { data, error } = await getClient()
       .from('instagram_audits')
       .select('*')
       .eq('user_id', userId)
@@ -33,7 +47,7 @@ export const supabaseRepository: AuditRepository = {
   },
 
   async getInstagramAudit(id) {
-    const { data, error } = await supabase
+    const { data, error } = await getClient()
       .from('instagram_audits')
       .select('*')
       .eq('id', id)
@@ -43,7 +57,7 @@ export const supabaseRepository: AuditRepository = {
   },
 
   async saveInstagramAudit(audit) {
-    const { data, error } = await supabase
+    const { data, error } = await getClient()
       .from('instagram_audits')
       .insert({
         user_id: audit.userId,
@@ -61,7 +75,7 @@ export const supabaseRepository: AuditRepository = {
   },
 
   async getLPAudits(userId) {
-    const { data, error } = await supabase
+    const { data, error } = await getClient()
       .from('lp_audits')
       .select('*')
       .eq('user_id', userId)
@@ -80,7 +94,7 @@ export const supabaseRepository: AuditRepository = {
   },
 
   async getLPAudit(id) {
-    const { data, error } = await supabase
+    const { data, error } = await getClient()
       .from('lp_audits')
       .select('*')
       .eq('id', id)
@@ -99,7 +113,7 @@ export const supabaseRepository: AuditRepository = {
   },
 
   async saveLPAudit(audit) {
-    const { data, error } = await supabase
+    const { data, error } = await getClient()
       .from('lp_audits')
       .insert({
         user_id: audit.userId,
@@ -125,8 +139,8 @@ export const supabaseRepository: AuditRepository = {
   },
 
   async getAllStudentsLatestAudit(): Promise<StudentSummary[]> {
-    const { data, error } = await supabase.rpc('get_students_latest_audit')
+    const { data, error } = await getClient().rpc('get_students_latest_audit')
     if (error) throw error
-    return data as StudentSummary[]
+    return (data ?? []).map(toStudentSummary)
   },
 }
