@@ -101,19 +101,24 @@ export const mockRepository: AuditRepository = {
     return saved
   },
   async getAllStudentsLatestAudit(): Promise<StudentSummary[]> {
-    const byUser = new Map<string, InstagramAudit>()
+    // Instagram-only summary — LP audits are not included in this view
+    const byUser = new Map<string, { latest: InstagramAudit; count: number }>()
     for (const a of instagramAudits) {
-      const existing = byUser.get(a.userId)
-      if (!existing || a.createdAt > existing.createdAt) byUser.set(a.userId, a)
+      const entry = byUser.get(a.userId)
+      if (!entry || a.createdAt > entry.latest.createdAt) {
+        byUser.set(a.userId, { latest: a, count: (entry?.count ?? 0) + 1 })
+      } else {
+        byUser.set(a.userId, { ...entry, count: entry.count + 1 })
+      }
     }
-    return Array.from(byUser.values()).map(a => ({
-      userId: a.userId,
-      email: `${a.userId}@mock.com`,
-      instagramHandle: a.instagramHandle,
-      tier: a.tier,
-      overallScore: a.overallScore,
-      lastAuditDate: a.createdAt,
-      totalAudits: instagramAudits.filter(x => x.userId === a.userId).length,
+    return Array.from(byUser.values()).map(({ latest, count }) => ({
+      userId: latest.userId,
+      email: `${latest.userId}@mock.com`,
+      instagramHandle: latest.instagramHandle,
+      tier: latest.tier,
+      overallScore: latest.overallScore,
+      lastAuditDate: latest.createdAt,
+      totalAudits: count,
     }))
   },
 }
