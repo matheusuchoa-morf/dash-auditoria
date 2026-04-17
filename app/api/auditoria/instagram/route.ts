@@ -19,12 +19,21 @@ export async function POST(req: NextRequest) {
   const encToken = req.cookies.get('ig_token_enc')?.value
   if (!encToken) return NextResponse.json({ error: 'Instagram não conectado' }, { status: 400 })
 
+  // Phase 1: Fetch Instagram data
+  let profile: Awaited<ReturnType<typeof getProfile>>
+  let media: Awaited<ReturnType<typeof getRecentMedia>>
   try {
-    const [profile, media] = await Promise.all([
+    ;[profile, media] = await Promise.all([
       getProfile(encToken),
-      getRecentMedia(encToken, 12),
+      getRecentMedia(encToken, 50), // 50 posts for reliable 7-day frequency calculation
     ])
+  } catch (err) {
+    console.error('[audit/instagram] Instagram API error:', err)
+    return NextResponse.json({ error: 'Falha ao buscar dados do Instagram. Reconecte sua conta.' }, { status: 401 })
+  }
 
+  // Phase 2: AI analysis + DB save
+  try {
     const recentCaptions = media.slice(0, 5).map(m => m.caption ?? '').filter(Boolean)
     const postsPerWeek = countPostsInLastDays(media, 7)
 
@@ -64,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     const overallScore = calcOverallScore(layers)
-    const tier = tierFromPostsPerWeek(postsPerWeek)
+    const tier = performanceTier
     const aiSummary = await generateSummary(profile.username, overallScore, tier)
 
     const audit = await db.saveInstagramAudit({
@@ -85,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ audit })
   } catch (err) {
-    console.error('Audit error:', err)
+    console.error('[audit/instagram] Processing error:', err)
     return NextResponse.json({ error: 'Erro ao processar auditoria' }, { status: 500 })
   }
 }
