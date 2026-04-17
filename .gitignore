@@ -3,3 +3,6 @@
 .next/
 node_modules/
 *.pem
+out/
+coverage/
+*.tsbuildinfo

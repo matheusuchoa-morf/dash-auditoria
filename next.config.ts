@@ -6,6 +6,8 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Content-Security-Policy', value: "default-src 'self'; img-src 'self' https://*.cdninstagram.com data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" },
+  { key: 'X-DNS-Prefetch-Control', value: 'on' },
 ]
 
 const nextConfig: NextConfig = {
